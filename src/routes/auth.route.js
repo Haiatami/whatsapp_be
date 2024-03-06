@@ -12,6 +12,8 @@ import {
 	loginStatus,
 	upgradeUser,
 	sendAutomatedEmail,
+	sendVerificationEmail,
+	verifyUser,
 } from '../controllers/auth.controller.js';
 const router = express.Router();
 
@@ -25,5 +27,7 @@ router.route('/getUsers').get(trimRequest.all, protect, authorOnly, getUsers);
 router.route('/loginStatus').get(trimRequest.all, loginStatus);
 router.route('/upgradeUser').post(trimRequest.all, protect, adminOnly, upgradeUser);
 router.route('/sendAutomatedEmail').post(trimRequest.all, protect, sendAutomatedEmail);
+router.route('/sendVerificationEmail').post(trimRequest.all, protect, sendVerificationEmail);
+router.route('/verifyUser/:verificationToken').patch(trimRequest.all, verifyUser);
 
 export default router;

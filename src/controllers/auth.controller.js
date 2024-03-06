@@ -2,7 +2,7 @@ import asyncHandler from 'express-async-handler';
 import createHttpError from 'http-errors';
 import validator from 'validator';
 import bcrypt from 'bcrypt';
-import { UserModel } from '../models/index.js';
+import { UserModel, TokenModel } from '../models/index.js';
 import parser from 'ua-parser-js';
 import { generateToken, hashToken } from '../utils/index.js';
 import { sendEmail } from '../utils/sendEmail.js';
@@ -177,6 +177,99 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 		} else {
 			throw createHttpError.InternalServerError('Something went wrong, please try again.');
 		}
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Send Verification Email
+export const sendVerificationEmail = asyncHandler(async (req, res, next) => {
+	try {
+		const user = await UserModel.findById(req.user._id);
+
+		if (!user) {
+			throw createHttpError.NotFound('User not found.');
+		}
+
+		if (user.isVerified) {
+			throw createHttpError.BadRequest('User already verified.');
+		}
+
+		// Delete Token if it exists in DB
+		let token = await TokenModel.findOne({ userId: user._id });
+		if (token) {
+			await token.deleteOne();
+		}
+
+		//   Create Verification Token and Save
+		const verificationToken = crypto.randomBytes(32).toString('hex') + user._id;
+
+		console.log(verificationToken);
+
+		// Hash token and save
+		const hashedToken = hashToken(verificationToken);
+
+		await new TokenModel({
+			userId: user._id,
+			vToken: hashedToken,
+			createdAt: Date.now(),
+			expiresAt: Date.now() + 60 * (60 * 1000), // 60mins
+		}).save();
+
+		// Construct Verification URL
+		const verificationUrl = `${
+			process.env.FRONTEND_URL_LOCAL || process.env.FRONTEND_URL_HOST
+		}/verify/${verificationToken}`;
+
+		// Send Email
+		const subject = 'Verify Your Account - WhatsApp';
+		const send_to = user.email;
+		const send_from = process.env.EMAIL_USER;
+		const reply_to = 'noreply@hoanghai.com';
+		const template = 'verifyEmail';
+		const name = user.name;
+		const link = verificationUrl;
+
+		try {
+			await sendEmail(subject, send_to, send_from, reply_to, template, name, link);
+			res.status(200).json({ message: 'Verification Email Sent' });
+		} catch (error) {
+			throw createHttpError.InternalServerError('Email not sent, please try again.');
+		}
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Verify User
+export const verifyUser = asyncHandler(async (req, res, next) => {
+	try {
+		const { verificationToken } = req.params;
+
+		const hashedToken = hashToken(verificationToken);
+
+		const userToken = await TokenModel.findOne({
+			vToken: hashedToken,
+			expiresAt: { $gt: Date.now() },
+		});
+
+		if (!userToken) {
+			throw createHttpError.NotFound('Invalid or Expired Token.');
+		}
+
+		// Find User
+		const user = await UserModel.findOne({ _id: userToken.userId });
+
+		if (user.isVerified) {
+			throw createHttpError.BadRequest('User is already verified.');
+		}
+
+		// Now verify user
+		user.isVerified = true;
+
+		await user.save();
+
+		res.status(200).json({ message: 'Account Verification Successful' });
 	} catch (error) {
 		next(error);
 	}
