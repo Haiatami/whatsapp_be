@@ -308,3 +308,26 @@ export const loginStatus = asyncHandler(async (req, res, next) => {
 		next(error);
 	}
 });
+
+// Upgrade User
+export const upgradeUser = asyncHandler(async (req, res, next) => {
+	try {
+		const { role, id } = req.body;
+
+		const user = await UserModel.findById(id);
+
+		if (!user) {
+			throw createHttpError.NotFound('User not found.');
+		}
+
+		user.role = role;
+
+		await user.save();
+
+		res.status(200).json({
+			message: `User role updated to ${role}`,
+		});
+	} catch (error) {
+		next(error);
+	}
+});
