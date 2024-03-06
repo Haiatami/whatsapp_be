@@ -181,8 +181,17 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 	}
 });
 
+// Logout User
 export const logoutUser = asyncHandler(async (req, res, next) => {
 	try {
+		res.cookie('token', '', {
+			path: '/',
+			httpOnly: true,
+			expires: new Date(0), // 1 day
+			sameSite: 'none',
+			secure: true,
+		});
+		return res.status(200).json({ message: 'Logout successful' });
 	} catch (error) {
 		next(error);
 	}
