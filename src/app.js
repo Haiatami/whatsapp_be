@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import fileUpload from 'express-fileupload';
 import cors from 'cors';
+import createHttpError from 'http-errors';
 import errorHandler from './middlewares/errorMiddleware.js';
 import routes from './routes/index.js';
 
