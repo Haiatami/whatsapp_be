@@ -1,0 +1,51 @@
+{
+	"name": "whatsapp_be",
+	"version": "1.0.0",
+	"main": "index.js",
+	"description": "WhatsApp Clone Backend",
+	"repository": "https://github.com/Haiatami/whatsapp_be.git",
+	"author": "Haiatami <tahoanghai755@gmail.com>",
+	"keywords": [
+		"MERN",
+		"AUTH",
+		"REAL TIME"
+	],
+	"author": "HoangHai",
+	"license": "MIT",
+	"type": "module",
+	"scripts": {
+		"start": "node ./src/index.js",
+		"dev": "cross-env NODE_ENV=development nodemon ./src/index.js"
+	},
+	"dependencies": {
+		"bcrypt": "^5.1.1",
+		"body-parser": "^1.20.2",
+		"compression": "^1.7.4",
+		"cookie-parser": "^1.4.6",
+		"cors": "^2.8.5",
+		"cross-env": "^7.0.3",
+		"cryptr": "^6.3.0",
+		"dotenv": "^16.4.5",
+		"express": "^4.18.3",
+		"express-async-handler": "^1.2.0",
+		"express-fileupload": "^1.4.3",
+		"express-handlebars": "^7.1.2",
+		"express-mongo-sanitize": "^2.2.0",
+		"google-auth-library": "^9.6.3",
+		"helmet": "^7.1.0",
+		"http-errors": "^2.0.0",
+		"jsonwebtoken": "^9.0.2",
+		"mongoose": "^8.2.1",
+		"morgan": "^1.10.0",
+		"nodemailer": "^6.9.11",
+		"nodemailer-express-handlebars": "^6.1.2",
+		"socket.io": "^4.7.4",
+		"trim-request": "^1.0.6",
+		"ua-parser-js": "^1.0.37",
+		"validator": "^13.11.0",
+		"winston": "^3.12.0"
+	},
+	"devDependencies": {
+		"nodemon": "^3.1.0"
+	}
+}
