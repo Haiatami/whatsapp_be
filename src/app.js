@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import fileUpload from 'express-fileupload';
 import cors from 'cors';
+import errorHandler from './middlewares/errorMiddleware.js';
 
 // create express app
 const app = express();
@@ -46,5 +47,27 @@ app.use(
 
 // cors
 app.use(cors());
+app.use(function (req, res, next) {
+	res.header('Access-Control-Allow-Origin', '*');
+	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+	next();
+});
+
+//error handling
+app.use(async (req, res, next) => {
+	next(createHttpError.NotFound('This route does not exist.'));
+});
+
+app.use(errorHandler);
+
+app.use(async (err, req, res, next) => {
+	res.status(err.status || 500);
+	res.send({
+		error: {
+			status: err.status || 500,
+			message: err.message,
+		},
+	});
+});
 
 export default app;
