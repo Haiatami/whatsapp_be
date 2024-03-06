@@ -288,3 +288,23 @@ export const getUsers = asyncHandler(async (req, res, next) => {
 		next(error);
 	}
 });
+
+// Login Status
+export const loginStatus = asyncHandler(async (req, res, next) => {
+	try {
+		const token = req.cookies.token;
+		if (!token) {
+			return res.json(false);
+		}
+
+		// Verify token
+		const verified = jwt.verify(token, process.env.JWT_SECRET);
+
+		if (verified) {
+			return res.json(true);
+		}
+		return res.json(false);
+	} catch (error) {
+		next(error);
+	}
+});

@@ -9,6 +9,7 @@ import {
 	updateUser,
 	deleteUser,
 	getUsers,
+	loginStatus,
 } from '../controllers/auth.controller.js';
 const router = express.Router();
 
@@ -19,5 +20,7 @@ router.route('/getUser').get(trimRequest.all, protect, getUser);
 router.route('/updateUser').patch(trimRequest.all, protect, updateUser);
 router.route('/:id').delete(trimRequest.all, protect, adminOnly, deleteUser);
 router.route('/getUsers').get(trimRequest.all, protect, authorOnly, getUsers);
+
+router.route('/loginStatus').get(trimRequest.all, loginStatus);
 
 export default router;
