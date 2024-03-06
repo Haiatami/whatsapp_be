@@ -456,3 +456,58 @@ export const sendAutomatedEmail = asyncHandler(async (req, res, next) => {
 		next(error);
 	}
 });
+
+// Forgot Password
+export const forgotPassword = asyncHandler(async (req, res, next) => {
+	try {
+		const { email } = req.body;
+
+		const user = await UserModel.findOne({ email });
+
+		if (!user) {
+			throw createHttpError.NotFound('No user with this email.');
+		}
+
+		// Delete Token if it exists in DB
+		let token = await TokenModel.findOne({ userId: user._id });
+		if (token) {
+			await token.deleteOne();
+		}
+
+		//   Create Verification Token and Save
+		const resetToken = crypto.randomBytes(32).toString('hex') + user._id;
+
+		console.log(resetToken);
+
+		// Hash token and save
+		const hashedToken = hashToken(resetToken);
+
+		await new TokenModel({
+			userId: user._id,
+			rToken: hashedToken,
+			createdAt: Date.now(),
+			expiresAt: Date.now() + 60 * (60 * 1000), // 60mins
+		}).save();
+
+		// Construct Reset URL
+		const resetUrl = `${process.env.FRONTEND_URL_LOCAL || process.env.FRONTEND_URL_HOST}/resetPassword/${resetToken}`;
+
+		// Send Email
+		const subject = 'Password Reset Request - WhatsApp';
+		const send_to = user.email;
+		const send_from = process.env.EMAIL_USER;
+		const reply_to = 'noreply@hoanghai.com';
+		const template = 'forgotPassword';
+		const name = user.name;
+		const link = resetUrl;
+
+		try {
+			await sendEmail(subject, send_to, send_from, reply_to, template, name, link);
+			res.status(200).json({ message: 'Password Reset Email Sent' });
+		} catch (error) {
+			throw createHttpError.InternalServerError('Email not sent, please try again.');
+		}
+	} catch (error) {
+		next(error);
+	}
+});
