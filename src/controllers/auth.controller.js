@@ -33,8 +33,7 @@ export const registerUser = asyncHandler(async (req, res, next) => {
 		}
 
 		if (password.length < 6) {
-			res.status(400);
-			throw new Error('Password must be up to 6 characters.');
+			throw createHttpError.BadRequest('Password must be up to 6 characters.');
 		}
 
 		//check if email address is valid
@@ -98,16 +97,85 @@ export const registerUser = asyncHandler(async (req, res, next) => {
 				token,
 			});
 		} else {
-			res.status(400);
-			throw new Error('Invalid user data');
+			throw createHttpError.BadRequest('Invalid user data.');
 		}
 	} catch (error) {
 		next(error);
 	}
 });
 
+// Login User
 export const loginUser = asyncHandler(async (req, res, next) => {
 	try {
+		const { email, password } = req.body;
+
+		//check if fields are empty
+		if (!email || !password) {
+			throw createHttpError.BadRequest('Please fill all fields.');
+		}
+
+		//check if email address is valid
+		if (!validator.isEmail(email)) {
+			throw createHttpError.BadRequest('Please make sure to provide a valid email address.');
+		}
+
+		if (password.length < 6) {
+			throw createHttpError.BadRequest('Password must be up to 6 characters.');
+		}
+
+		//check password length
+		if (
+			!validator.isLength(password, {
+				min: 6,
+				max: 128,
+			})
+		) {
+			throw createHttpError.BadRequest('Please make sure your password is between 6 and 128 characters.');
+		}
+
+		const user = await UserModel.findOne({ email: email.toLowerCase() }).lean();
+
+		if (!user) {
+			throw createHttpError.NotFound('User not found, please signup.');
+		}
+
+		const passwordIsCorrect = await bcrypt.compare(password, user.password);
+
+		if (!passwordIsCorrect) {
+			throw createHttpError.NotFound('Invalid email or password.');
+		}
+
+		// Trgger 2FA for unknow UserAgent
+
+		// Generate Token
+		const token = generateToken(user._id);
+
+		if (user && passwordIsCorrect) {
+			// Send HTTP-only cookie
+			res.cookie('token', token, {
+				path: '/',
+				httpOnly: true,
+				expires: new Date(Date.now() + 1000 * 86400), // 1 day
+				sameSite: 'none',
+				secure: true,
+			});
+
+			const { _id, name, email, phone, status, picture, role, isVerified } = user;
+
+			res.status(200).json({
+				_id,
+				name,
+				email,
+				phone,
+				status,
+				picture,
+				role,
+				isVerified,
+				token,
+			});
+		} else {
+			throw createHttpError.InternalServerError('Something went wrong, please try again.');
+		}
 	} catch (error) {
 		next(error);
 	}
