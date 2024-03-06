@@ -15,6 +15,7 @@ import {
 	sendVerificationEmail,
 	verifyUser,
 	forgotPassword,
+	resetPassword,
 } from '../controllers/auth.controller.js';
 const router = express.Router();
 
@@ -31,5 +32,6 @@ router.route('/sendAutomatedEmail').post(trimRequest.all, protect, sendAutomated
 router.route('/sendVerificationEmail').post(trimRequest.all, protect, sendVerificationEmail);
 router.route('/verifyUser/:verificationToken').patch(trimRequest.all, verifyUser);
 router.route('/forgotPassword').post(trimRequest.all, forgotPassword);
+router.route('/resetPassword/:resetToken').patch(trimRequest.all, resetPassword);
 
 export default router;

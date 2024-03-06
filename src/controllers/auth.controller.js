@@ -511,3 +511,37 @@ export const forgotPassword = asyncHandler(async (req, res, next) => {
 		next(error);
 	}
 });
+
+// Reset Password
+export const resetPassword = asyncHandler(async (req, res, next) => {
+	try {
+		const { resetToken } = req.params;
+		const { password } = req.body;
+		console.log(resetToken);
+		console.log(password);
+
+		const hashedToken = hashToken(resetToken);
+
+		const userToken = await TokenModel.findOne({
+			rToken: hashedToken,
+			expiresAt: { $gt: Date.now() },
+		});
+
+		if (!userToken) {
+			res.status(404);
+			throw new Error('Invalid or Expired Token');
+		}
+
+		// Find User
+		const user = await UserModel.findOne({ _id: userToken.userId });
+
+		// Now Reset password
+		user.password = password;
+
+		await user.save();
+
+		res.status(200).json({ message: 'Password Reset Successful, please login' });
+	} catch (error) {
+		next(error);
+	}
+});
