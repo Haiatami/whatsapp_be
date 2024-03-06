@@ -528,8 +528,7 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
 		});
 
 		if (!userToken) {
-			res.status(404);
-			throw new Error('Invalid or Expired Token');
+			throw createHttpError.NotFound('Invalid or Expired Token.');
 		}
 
 		// Find User
@@ -541,6 +540,38 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
 		await user.save();
 
 		res.status(200).json({ message: 'Password Reset Successful, please login' });
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Change Password
+export const changePassword = asyncHandler(async (req, res, next) => {
+	try {
+		const { oldPassword, password } = req.body;
+		const user = await UserModel.findById(req.user._id);
+
+		if (!user) {
+			throw createHttpError.NotFound('User not found.');
+		}
+
+		if (!oldPassword || !password) {
+			throw createHttpError.BadRequest('Please enter old and new password.');
+		}
+
+		// Check if old password is correct
+		const passwordIsCorrect = await bcrypt.compare(oldPassword, user.password);
+
+		// Save new password
+		if (user && passwordIsCorrect) {
+			user.password = password;
+
+			await user.save();
+
+			res.status(200).json({ message: 'Password change successful, please re-login' });
+		} else {
+			throw createHttpError.BadRequest('Old password is incorrect.');
+		}
 	} catch (error) {
 		next(error);
 	}
