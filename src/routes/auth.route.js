@@ -18,6 +18,8 @@ import {
 	resetPassword,
 	changePassword,
 	sendLoginCode,
+	loginWithCode,
+	loginWithGoogle,
 } from '../controllers/auth.controller.js';
 const router = express.Router();
 
@@ -37,6 +39,7 @@ router.route('/forgotPassword').post(trimRequest.all, forgotPassword);
 router.route('/resetPassword/:resetToken').patch(trimRequest.all, resetPassword);
 router.route('/changePassword').patch(trimRequest.all, protect, changePassword);
 router.route('/sendLoginCode/:email').post(trimRequest.all, sendLoginCode);
-
+router.route('/loginWithCode/:email').post(trimRequest.all, loginWithCode);
+router.route('/google/callback').post(trimRequest.all, loginWithGoogle);
 
 export default router;

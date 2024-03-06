@@ -9,9 +9,13 @@ import { sendEmail } from '../utils/sendEmail.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import Cryptr from 'cryptr';
+import { OAuth2Client } from 'google-auth-library';
+
 
 //env variables
 const { DEFAULT_PICTURE } = process.env;
+const cryptr = new Cryptr(`${process.env.CRYPTR_KEY}`);
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Register User
 export const registerUser = asyncHandler(async (req, res, next) => {
@@ -249,6 +253,70 @@ export const sendLoginCode = asyncHandler(async (req, res, next) => {
 			res.status(200).json({ message: `Access code sent to ${email}` });
 		} catch (error) {
 			throw createHttpError.InternalServerError('Email not sent, please try again.');
+		}
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Login With Code
+export const loginWithCode = asyncHandler(async (req, res, next) => {
+	try {
+		const { email } = req.params;
+		const { loginCode } = req.body;
+
+		const user = await UserModel.findOne({ email });
+
+		if (!user) {
+			throw createHttpError.NotFound('User not found.');
+		}
+
+		// Find user Login Token
+		const userToken = await TokenModel.findOne({
+			userId: user.id,
+			expiresAt: { $gt: Date.now() },
+		});
+
+		if (!userToken) {
+			throw createHttpError.NotFound('Invalid or Expired Token, please login again.');
+		}
+
+		const decryptedLoginCode = cryptr.decrypt(userToken.lToken);
+
+		if (loginCode !== decryptedLoginCode) {
+			throw createHttpError.BadRequest('Incorrect login code, please try again.');
+		} else {
+			// Register userAgent
+			const ua = parser(req.headers['user-agent']);
+			const thisUserAgent = ua.ua;
+			user.userAgent.push(thisUserAgent);
+			await user.save();
+
+			// Generate Token
+			const token = generateToken(user._id);
+
+			// Send HTTP-only cookie
+			res.cookie('token', token, {
+				path: '/',
+				httpOnly: true,
+				expires: new Date(Date.now() + 1000 * 86400), // 1 day
+				sameSite: 'none',
+				secure: true,
+			});
+
+			const { _id, name, email, phone, status, picture, role, isVerified } = user;
+
+			res.status(200).json({
+				_id,
+				name,
+				email,
+				phone,
+				status,
+				picture,
+				role,
+				isVerified,
+				token,
+			});
 		}
 	} catch (error) {
 		next(error);
@@ -644,6 +712,100 @@ export const changePassword = asyncHandler(async (req, res, next) => {
 			res.status(200).json({ message: 'Password change successful, please re-login' });
 		} else {
 			throw createHttpError.BadRequest('Old password is incorrect.');
+		}
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Login With Google
+export const loginWithGoogle = asyncHandler(async (req, res, next) => {
+	try {
+		const { userToken } = req.body;
+		//   console.log(userToken);
+
+		const ticket = await client.verifyIdToken({
+			idToken: userToken,
+			audience: process.env.GOOGLE_CLIENT_ID,
+		});
+
+		const payload = ticket.getPayload();
+		const { name, email, picture, sub } = payload;
+		const password = Date.now() + sub;
+
+		// Get UserAgent
+		const ua = parser(req.headers['user-agent']);
+		const userAgent = [ua.ua];
+
+		// Check if user exists
+		const user = await UserModel.findOne({ email });
+
+		if (!user) {
+			//   Create new user
+			const newUser = await UserModel.create({
+				name,
+				email,
+				password,
+				picture: picture,
+				isVerified: true,
+				userAgent,
+			});
+
+			if (newUser) {
+				// Generate Token
+				const token = generateToken(newUser._id);
+
+				// Send HTTP-only cookie
+				res.cookie('token', token, {
+					path: '/',
+					httpOnly: true,
+					expires: new Date(Date.now() + 1000 * 86400), // 1 day
+					sameSite: 'none',
+					secure: true,
+				});
+
+				const { _id, name, email, phone, status, picture, role, isVerified } = newUser;
+
+				res.status(201).json({
+					_id,
+					name,
+					email,
+					phone,
+					status,
+					picture,
+					role,
+					isVerified,
+					token,
+				});
+			}
+		}
+
+		// User exists, login
+		if (user) {
+			const token = generateToken(user._id);
+
+			// Send HTTP-only cookie
+			res.cookie('token', token, {
+				path: '/',
+				httpOnly: true,
+				expires: new Date(Date.now() + 1000 * 86400), // 1 day
+				sameSite: 'none',
+				secure: true,
+			});
+
+			const { _id, name, email, phone, status, picture, role, isVerified } = user;
+
+			res.status(201).json({
+				_id,
+				name,
+				email,
+				phone,
+				status,
+				picture,
+				role,
+				isVerified,
+				token,
+			});
 		}
 	} catch (error) {
 		next(error);
