@@ -196,3 +196,63 @@ export const logoutUser = asyncHandler(async (req, res, next) => {
 		next(error);
 	}
 });
+
+// Get User
+export const getUser = asyncHandler(async (req, res, next) => {
+	try {
+		const user = await UserModel.findById(req.user._id);
+
+		if (user) {
+			const { _id, name, email, phone, status, picture, role, isVerified } = user;
+
+			res.status(200).json({
+				_id,
+				name,
+				email,
+				phone,
+				status,
+				picture,
+				role,
+				isVerified,
+			});
+		} else {
+			throw createHttpError.NotFound('User not found.');
+		}
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Update User
+export const updateUser = asyncHandler(async (req, res, next) => {
+	try {
+		const user = await UserModel.findById(req.user._id);
+
+		if (user) {
+			const { name, email, phone, status, picture, role, isVerified } = user;
+
+			user.email = email;
+			user.name = req.body.name || name;
+			user.phone = req.body.phone || phone;
+			user.status = req.body.status || status;
+			user.picture = req.body.picture || picture;
+
+			const updatedUser = await user.save();
+
+			res.status(200).json({
+				_id: updatedUser._id,
+				name: updatedUser.name,
+				email: updatedUser.email,
+				phone: updatedUser.phone,
+				status: updatedUser.status,
+				picture: updatedUser.picture,
+				role: updatedUser.role,
+				isVerified: updatedUser.isVerified,
+			});
+		} else {
+			throw createHttpError.NotFound('User not found.');
+		}
+	} catch (error) {
+		next(error);
+	}
+});
