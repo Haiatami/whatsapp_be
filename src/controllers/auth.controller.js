@@ -256,3 +256,22 @@ export const updateUser = asyncHandler(async (req, res, next) => {
 		next(error);
 	}
 });
+
+// Delete User
+export const deleteUser = asyncHandler(async (req, res, next) => {
+	try {
+		const user = UserModel.findById(req.params.id);
+
+		if (!user) {
+			throw createHttpError.NotFound('User not found.');
+		}
+
+		await user.deleteOne();
+
+		res.status(200).json({
+			message: 'User deleted successfully',
+		});
+	} catch (error) {
+		next(error);
+	}
+});
