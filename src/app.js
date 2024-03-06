@@ -8,6 +8,7 @@ import compression from 'compression';
 import fileUpload from 'express-fileupload';
 import cors from 'cors';
 import errorHandler from './middlewares/errorMiddleware.js';
+import routes from './routes/index.js';
 
 // create express app
 const app = express();
@@ -44,6 +45,9 @@ app.use(
 		useTempFiles: true,
 	})
 );
+
+//api v1 routes
+app.use('/api/v1', routes);
 
 // cors
 app.use(cors());
