@@ -275,3 +275,16 @@ export const deleteUser = asyncHandler(async (req, res, next) => {
 		next(error);
 	}
 });
+
+// Get Users
+export const getUsers = asyncHandler(async (req, res, next) => {
+	try {
+		const users = await UserModel.find().sort('-createdAt').select('-password');
+		if (!users) {
+			throw createHttpError.InternalServerError('Something went wrong.');
+		}
+		res.status(200).json(users);
+	} catch (error) {
+		next(error);
+	}
+});
