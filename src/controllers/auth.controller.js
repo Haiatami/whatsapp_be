@@ -147,6 +147,36 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 		}
 
 		// Trgger 2FA for unknow UserAgent
+		const ua = parser(req.headers['user-agent']);
+		const thisUserAgent = ua.ua;
+		console.log(thisUserAgent);
+		const allowedAgent = user.userAgent.includes(thisUserAgent);
+
+		if (!allowedAgent) {
+			// Genrate 6 digit code
+			const loginCode = Math.floor(100000 + Math.random() * 900000);
+			console.log(loginCode);
+
+			// Encrypt login code before saving to DB
+			const encryptedLoginCode = cryptr.encrypt(loginCode.toString());
+
+			// Delete Token if it exists in DB
+			let userToken = await TokenModel.findOne({ userId: user._id });
+
+			if (userToken) {
+				await userToken.deleteOne();
+			}
+
+			// Save Tokrn to DB
+			await new TokenModel({
+				userId: user._id,
+				lToken: encryptedLoginCode,
+				createdAt: Date.now(),
+				expiresAt: Date.now() + 60 * (60 * 1000), // 60mins
+			}).save();
+
+			throw createHttpError.BadRequest('New browser or device detected.');
+		}
 
 		// Generate Token
 		const token = generateToken(user._id);
@@ -176,6 +206,49 @@ export const loginUser = asyncHandler(async (req, res, next) => {
 			});
 		} else {
 			throw createHttpError.InternalServerError('Something went wrong, please try again.');
+		}
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Send Login Code
+export const sendLoginCode = asyncHandler(async (req, res, next) => {
+	try {
+		const { email } = req.params;
+		const user = await UserModel.findOne({ email });
+
+		if (!user) {
+			throw createHttpError.NotFound('User not found.');
+		}
+
+		// Find Login Code in DB
+		let userToken = await TokenModel.findOne({
+			userId: user._id,
+			expiresAt: { $gt: Date.now() },
+		});
+
+		if (!userToken) {
+			throw createHttpError.NotFound('Invalid or Expired token, please login again.');
+		}
+
+		const loginCode = userToken.lToken;
+		const decryptedLoginCode = cryptr.decrypt(loginCode);
+
+		// Send Login Code
+		const subject = 'Login Access Code - WhatsApp';
+		const send_to = email;
+		const send_from = process.env.EMAIL_USER;
+		const reply_to = 'noreply@hoanghai.com';
+		const template = 'loginCode';
+		const name = user.name;
+		const link = decryptedLoginCode;
+
+		try {
+			await sendEmail(subject, send_to, send_from, reply_to, template, name, link);
+			res.status(200).json({ message: `Access code sent to ${email}` });
+		} catch (error) {
+			throw createHttpError.InternalServerError('Email not sent, please try again.');
 		}
 	} catch (error) {
 		next(error);
