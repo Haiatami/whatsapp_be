@@ -11,6 +11,7 @@ import {
 	getUsers,
 	loginStatus,
 	upgradeUser,
+	sendAutomatedEmail,
 } from '../controllers/auth.controller.js';
 const router = express.Router();
 
@@ -23,5 +24,6 @@ router.route('/:id').delete(trimRequest.all, protect, adminOnly, deleteUser);
 router.route('/getUsers').get(trimRequest.all, protect, authorOnly, getUsers);
 router.route('/loginStatus').get(trimRequest.all, loginStatus);
 router.route('/upgradeUser').post(trimRequest.all, protect, adminOnly, upgradeUser);
+router.route('/sendAutomatedEmail').post(trimRequest.all, protect, sendAutomatedEmail);
 
 export default router;

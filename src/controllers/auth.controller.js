@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import { UserModel } from '../models/index.js';
 import parser from 'ua-parser-js';
 import { generateToken, hashToken } from '../utils/index.js';
+import { sendEmail } from '../utils/sendEmail.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import Cryptr from 'cryptr';
@@ -327,6 +328,37 @@ export const upgradeUser = asyncHandler(async (req, res, next) => {
 		res.status(200).json({
 			message: `User role updated to ${role}`,
 		});
+	} catch (error) {
+		next(error);
+	}
+});
+
+// Send Automated Email
+export const sendAutomatedEmail = asyncHandler(async (req, res, next) => {
+	try {
+		const { subject, send_to, reply_to, template, url } = req.body;
+
+		if (!subject || !send_to || !reply_to || !template) {
+			throw createHttpError.InternalServerError('Missing email parameter.');
+		}
+
+		// Get user
+		const user = await UserModel.findOne({ email: send_to });
+
+		if (!user) {
+			throw createHttpError.NotFound('User not found.');
+		}
+
+		const send_from = process.env.EMAIL_USER;
+		const name = user.name;
+		const link = `${process.env.FRONTEND_URL_LOCAL || process.env.FRONTEND_URL_HOST}${url}`;
+
+		try {
+			await sendEmail(subject, send_to, send_from, reply_to, template, name, link);
+			res.status(200).json({ message: 'Email Sent' });
+		} catch (error) {
+			throw createHttpError.InternalServerError('Email not sent, please try again.');
+		}
 	} catch (error) {
 		next(error);
 	}
